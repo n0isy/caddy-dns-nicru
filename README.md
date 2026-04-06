@@ -26,8 +26,8 @@ To use this module for the ACME DNS challenge, configure the [ACME issuer](https
             "provider": {
                 "name": "nicru",
                 "oauth2_client_id": "YOUR_CLIENT_ID",
-                "oauth2_secret_id": "YOUR_SECRET_ID",
-                "username": "YOUR_USERNAME",
+                "oauth2_secret_id": "YOUR_CLIENT_SECRET",
+                "username": "123/NIC-D",
                 "password": "YOUR_PASSWORD",
                 "dns_service_name": "YOUR_SERVICE_NAME"
             }
@@ -45,7 +45,7 @@ your.domain.ru {
     tls {
         dns nicru {
             oauth2_client_id {env.NICRU_CLIENT_ID}
-            oauth2_secret_id {env.NICRU_SECRET_ID}
+            oauth2_secret_id {env.NICRU_CLIENT_SECRET}
             username         {env.NICRU_USERNAME}
             password         {env.NICRU_PASSWORD}
             dns_service_name {env.NICRU_SERVICE_NAME}
@@ -56,17 +56,52 @@ your.domain.ru {
 }
 ```
 
-The `cache_path` directive is optional and specifies where to store the OAuth2 token cache. If omitted, tokens are re-fetched on each request.
+The `cache_path` directive is optional and specifies where to store the OAuth2 token cache file. If omitted, tokens are re-fetched on each request.
 
 Setting `propagation_delay` to 60s is recommended for NIC.RU as their DNS propagation can be slow.
 
 ## Authentication
 
-To obtain API credentials:
+NIC.RU uses [OAuth 2.0](https://www.nic.ru/help/oauth-server_3642.html) with the Resource Owner Password Credentials grant (`grant_type=password`).
+
+### 1. Register an OAuth2 application
 
 1. Log in to [NIC.RU](https://www.nic.ru/).
-2. Go to **Applications** in your account settings and register an OAuth2 application. Note the **Client ID** and **Secret**.
-3. The `username` and `password` are your NIC.RU account credentials.
-4. The `dns_service_name` is the name of your DNS hosting service (visible in the DNS management panel, e.g. `MY-DNS-SERVICE`).
+2. Go to the [application registration page](https://www.nic.ru/manager/oauth.cgi?step=oauth.app_register).
+3. Enter your application name and click **Register**.
+4. The server will generate `client_id` and `client_secret` — these map to `oauth2_client_id` and `oauth2_secret_id` in the Caddy config.
 
-Refer to the [NIC.RU DNS API documentation](https://www.nic.ru/help/upload/file/API_DNS-hosting.pdf) for details.
+You can manage your apps and rotate `client_secret` at [application management](https://www.nic.ru/manager/oauth.cgi?step=oauth.app_list).
+
+### 2. Provide your NIC.RU credentials
+
+- `username` — your NIC.RU contract identifier (e.g. `123/NIC-D` or `456/NIC-REG`). This is your login, not your email.
+- `password` — your NIC.RU account password (administrative or technical password).
+
+### 3. Find your DNS service name
+
+- `dns_service_name` — the name of your DNS hosting service, visible in the [DNS management panel](https://www.nic.ru/manager/dns/serviceslist.cgi) (e.g. `MY-DNS-SERVICE`).
+
+### Token flow
+
+Under the hood, the provider obtains an access token via:
+
+```
+POST https://api.nic.ru/oauth/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password
+&username=123/NIC-D
+&password=<password>
+&client_id=<client_id>
+&client_secret=<client_secret>
+&scope=.*
+```
+
+The token is cached (if `cache_path` is set) and automatically refreshed using the `refresh_token` when it expires.
+
+## References
+
+- [NIC.RU OAuth server docs](https://www.nic.ru/help/oauth-server_3642.html)
+- [NIC.RU DNS API docs](https://www.nic.ru/help/upload/file/API_DNS-hosting.pdf)
+- [libdns/nicrudns](https://github.com/libdns/nicrudns)
