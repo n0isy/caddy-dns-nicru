@@ -3,7 +3,7 @@ package nicru
 import (
 	"github.com/caddyserver/caddy/v2"
 	"github.com/caddyserver/caddy/v2/caddyconfig/caddyfile"
-	"github.com/caddy-dns-nicru/nicrudns"
+	"github.com/n0isy/caddy-dns-nicru/nicrudns"
 )
 
 // Provider wraps the provider implementation as a Caddy module.

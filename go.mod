@@ -1,4 +1,4 @@
-module github.com/caddy-dns-nicru
+module github.com/n0isy/caddy-dns-nicru
 
 go 1.25.0
 
